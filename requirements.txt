@@ -1,2 +1,4 @@
 nvidia-riva-client==2.17.0
 pyaudio
+requests
+

@@ -4,6 +4,10 @@ import riva.client
 from riva.client.argparse_utils import add_asr_config_argparse_parameters, add_connection_argparse_parameters
 
 import riva.client.audio_io
+from config import chatbot_config, riva_config, asr_config
+import requests 
+
+
 
 
 def parse_args() -> argparse.Namespace:
@@ -35,12 +39,34 @@ def parse_args() -> argparse.Namespace:
     return args
 
 
+def send_transcript(text, bot_name="sample_bot", user_conversation_index=1):
+    url = chatbot_config['URL']
+    data = {
+        "text": text,
+        "bot": bot_name,
+        "user_conversation_index": user_conversation_index
+    }
+
+    try:
+        response = requests.post(url, json=data)
+        response_data = response.json()
+        if response_data.get("ok"):
+            print("Transcript sent successfully:", response_data)
+        else:
+            print("Failed to send transcript:", response_data.get("message"))
+    except requests.exceptions.RequestException as e:
+        print("Error during request:", e)
+
+# Example usage
+new_transcript_text = "This is a sample transcript text."
+send_transcript(new_transcript_text)
+
 def main() -> None:
     args = parse_args()
     if args.list_devices:
         riva.client.audio_io.list_input_devices()
         return
-    auth = riva.client.Auth(args.ssl_cert, args.use_ssl, args.server, args.metadata)
+    auth = riva.client.Auth(args.ssl_cert, args.use_ssl,riva_config['RIVA_SPEECH_API_URL'], args.metadata)
     asr_service = riva.client.ASRService(auth)
     config = riva.client.StreamingRecognitionConfig(
         config=riva.client.RecognitionConfig(
@@ -48,8 +74,8 @@ def main() -> None:
             language_code=args.language_code,
             max_alternatives=1,
             profanity_filter=args.profanity_filter,
-            enable_automatic_punctuation=args.automatic_punctuation,
-            verbatim_transcripts=not args.no_verbatim_transcripts,
+            enable_automatic_punctuation=asr_config['ENABLE_AUTOMATIC_PUNCTUATION'],
+            verbatim_transcripts=asr_config['VERBATIM_TRANSCRIPTS'],
             sample_rate_hertz=args.sample_rate_hz,
             audio_channel_count=1,
         ),
@@ -86,7 +112,7 @@ def main() -> None:
                     
                         for i, alternative in enumerate(result.alternatives):
                                 # send this automatically to rasa
-                                print(alternative.transcript)
+                                send_transcript(alternative.transcript)
       
        
 

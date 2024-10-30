@@ -1,0 +1,13 @@
+[Unit]
+Description=Python Speech Recognizer Service
+After=network.target
+
+[Service]
+ExecStart=/home/touti/dev/speech_recognizer/.venv_sr/bin/python3 /home/touti/dev/speech_recognizer/speech_recognizer.py
+WorkingDirectory=/home/touti/dev/speech_recognizer/
+Restart=always
+User=touti
+Environment=PYTHONUNBUFFERED=1
+
+[Install]
+WantedBy=multi-user.target
