@@ -59,9 +59,9 @@ def send_transcript(text, bot_name="sample_bot", user_conversation_index=1):
 
 # Example usage
 new_transcript_text = "Hello! Welcome to your personal assistant. How can I assist you today?"
-new_transcript_text = "Hello!"
-send_transcript(new_transcript_text)
+# new_transcript_text = "Hello!"
 
+send_transcript(new_transcript_text)
 def main() -> None:
     args = parse_args()
     if args.list_devices:
