@@ -1,6 +1,6 @@
 
 chatbot_config = {
-    "URL": "http://localhost:5555/",
+    "URL": "http://localhost:5000/synthesize",
     "DEBUG": True, # When this flag is set, the UI displays detailed riva data
     "VERBOSE": True  # print logs/details for diagnostics
 }

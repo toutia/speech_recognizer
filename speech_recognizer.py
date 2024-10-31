@@ -50,7 +50,7 @@ def send_transcript(text, bot_name="sample_bot", user_conversation_index=1):
     try:
         response = requests.post(url, json=data)
         response_data = response.json()
-        if response_data.get("ok"):
+        if response_data.get("success"):
             print("Transcript sent successfully:", response_data)
         else:
             print("Failed to send transcript:", response_data.get("message"))
@@ -58,7 +58,8 @@ def send_transcript(text, bot_name="sample_bot", user_conversation_index=1):
         print("Error during request:", e)
 
 # Example usage
-new_transcript_text = "This is a sample transcript text."
+new_transcript_text = "Hello! Welcome to your personal assistant. How can I assist you today?"
+new_transcript_text = "Hello!"
 send_transcript(new_transcript_text)
 
 def main() -> None:
@@ -113,6 +114,7 @@ def main() -> None:
                         for i, alternative in enumerate(result.alternatives):
                                 # send this automatically to rasa
                                 send_transcript(alternative.transcript)
+                                print(alternative.transcript)
       
        
 
