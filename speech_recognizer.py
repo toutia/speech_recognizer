@@ -39,21 +39,25 @@ def parse_args() -> argparse.Namespace:
     return args
 
 
-def send_transcript(text, bot_name="sample_bot", user_conversation_index=1):
-    url = chatbot_config['URL']
-    data = {
-        "message": text,
-        "sender": "user123",
-    }
+def send_transcript(text, initial=False):
     responses=[]
-    try:
-        response = requests.post(url, json=data)
-        response_data = response.json()
-        for e_resp in response_data:
-             responses.append(e_resp.get('text'))
-    except requests.exceptions.RequestException as e:
-        print("Error during request:", e)
-
+    if not initial:
+        url = chatbot_config['URL']
+        data = {
+            "message": text,
+            "sender": "user123",
+        }
+        
+        try:
+            response = requests.post(url, json=data)
+            response_data = response.json()
+            for e_resp in response_data:
+                responses.append(e_resp.get('text'))
+        except requests.exceptions.RequestException as e:
+            print("Error during request:", e)
+    else:
+        responses=[text]
+    print(responses)
     # send to tts 
     url = tts_config['TTS_API_URL']
     
@@ -75,7 +79,7 @@ def send_transcript(text, bot_name="sample_bot", user_conversation_index=1):
 new_transcript_text = "Hello! Welcome to your personal assistant. How can I assist you today?"
 # new_transcript_text = "Hello!"
 
-send_transcript(new_transcript_text)
+send_transcript(new_transcript_text, initial=True)
 def main() -> None:
     args = parse_args()
     if args.list_devices:
@@ -127,8 +131,9 @@ def main() -> None:
                     
                         for i, alternative in enumerate(result.alternatives):
                                 # send this automatically to rasa
-                                send_transcript(alternative.transcript)
                                 print(alternative.transcript)
+                                send_transcript(alternative.transcript, initial=False)
+                                
       
        
 
