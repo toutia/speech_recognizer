@@ -1,6 +1,6 @@
 
 chatbot_config = {
-    "URL": "http://localhost:5000/synthesize",
+    "URL": "http://localhost:5005/webhooks/rest/webhook",
     "DEBUG": True, # When this flag is set, the UI displays detailed riva data
     "VERBOSE": True  # print logs/details for diagnostics
 }
@@ -22,4 +22,10 @@ asr_config = {
     "SPEAKER_DIARIZATION":False,
     "DIARIZATION_MAX_SPEAKERS":3
 }
-
+tts_config = {
+    "TTS_API_URL":"http://localhost:5010/synthesize",
+    "VERBOSE": True, # Print logs/details for diagnostics
+    "SAMPLE_RATE": 22050, # The speech is generated at this sampling rate. The only value currently supported is 22050
+    "LANGUAGE_CODE": "en-US", # The language code as a BCP-47 language tag. The only value currently supported is "en-US"
+    "VOICE_NAME": "English-US-Female-1", # Options are English-US-Female-1 and English-US-Male-1
+}

@@ -4,7 +4,7 @@ import riva.client
 from riva.client.argparse_utils import add_asr_config_argparse_parameters, add_connection_argparse_parameters
 
 import riva.client.audio_io
-from config import chatbot_config, riva_config, asr_config
+from config import chatbot_config, riva_config, asr_config, tts_config  
 import requests 
 
 
@@ -42,20 +42,34 @@ def parse_args() -> argparse.Namespace:
 def send_transcript(text, bot_name="sample_bot", user_conversation_index=1):
     url = chatbot_config['URL']
     data = {
-        "text": text,
-        "bot": bot_name,
-        "user_conversation_index": user_conversation_index
+        "message": text,
+        "sender": "user123",
     }
-
+    responses=[]
     try:
         response = requests.post(url, json=data)
         response_data = response.json()
-        if response_data.get("success"):
-            print("Transcript sent successfully:", response_data)
-        else:
-            print("Failed to send transcript:", response_data.get("message"))
+        for e_resp in response_data:
+             responses.append(e_resp.get('text'))
     except requests.exceptions.RequestException as e:
         print("Error during request:", e)
+
+    # send to tts 
+    url = tts_config['TTS_API_URL']
+    
+
+    for e_resp in responses:
+        payload = {
+            "voice":"English-US.Female-1",
+            "text": e_resp
+        }
+        try:
+            response = requests.post(url, json=payload)
+            response.raise_for_status()  # Raise an error for bad responses
+        except requests.RequestException as e:
+            print(f"Failed to send message to endpoint: {e}")
+
+
 
 # Example usage
 new_transcript_text = "Hello! Welcome to your personal assistant. How can I assist you today?"
