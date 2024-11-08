@@ -41,22 +41,23 @@ def parse_args() -> argparse.Namespace:
 
 def send_transcript(text, initial=False):
     responses=[]
-    if not initial:
-        url = chatbot_config['URL']
-        data = {
-            "message": text,
-            "sender": "user123",
-        }
-        
-        try:
-            response = requests.post(url, json=data)
-            response_data = response.json()
-            for e_resp in response_data:
-                responses.append(e_resp.get('text'))
-        except requests.exceptions.RequestException as e:
-            print("Error during request:", e)
-    else:
-        responses=[text]
+
+    url = chatbot_config['URL']
+    data = {
+        "message": text,
+        "sender": "user123",
+    }
+    
+    try:
+        response = requests.post(url, json=data)
+        response_data = response.json()
+        print(response_data)
+        for e_resp in response_data:
+            responses.append(e_resp.get('text'))
+    except requests.exceptions.RequestException as e:
+        print("Error during request:", e)
+
+
     print(responses)
     # send to tts 
     url = tts_config['TTS_API_URL']
@@ -75,11 +76,9 @@ def send_transcript(text, initial=False):
 
 
 
-# Example usage
-new_transcript_text = "Hello! Welcome to your personal assistant. How can I assist you today?"
-# new_transcript_text = "Hello!"
 
-send_transcript(new_transcript_text, initial=True)
+
+
 def main() -> None:
     args = parse_args()
     if args.list_devices:
@@ -110,6 +109,11 @@ def main() -> None:
         args.stop_threshold,                                                                                                                                                                                                                                                    
         args.stop_threshold_eou
     )
+
+
+    send_transcript("/restart_conversation")  
+
+
     with riva.client.audio_io.MicrophoneStream(
         args.sample_rate_hz,
         args.file_streaming_chunk,
