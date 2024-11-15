@@ -1,13 +1,27 @@
 [Unit]
 Description=Python Speech Recognizer Service
-After=network.target
+After=sound.target
+After=triton_manager.service
+After=dialogue_manager.service
+After=speech_synthesizer.service
+Requires=triton_manager.service
+Wants=dialogue_manager.service
+Wants=speech_synthesizer.service
 
 [Service]
+ExecStartPre=/usr/bin/bash -c 'until [ "$(curl -s -o /dev/null -w "%{http_code}" http://localhost:8000/v2/health/ready)" -eq 200 ]; do sleep 1; done'
+User=touti
+Environment=XDG_RUNTIME_DIR="/run/user/1000"
+Environment=DBUS_SESSION_BUS_ADDRESS="unix:path=/run/user/1000/bus"
 ExecStart=/home/touti/dev/speech_recognizer/.venv_sr/bin/python3 /home/touti/dev/speech_recognizer/speech_recognizer.py
 WorkingDirectory=/home/touti/dev/speech_recognizer/
 Restart=always
-User=touti
 Environment=PYTHONUNBUFFERED=1
 
+# Logging settings (overwrite log file on each start)
+StandardOutput=truncate:/home/touti/dev/speech_recognizer/speech_recognizer.log
+StandardError=truncate:/home/touti/dev/speech_recognizer/speech_recognizer.log
+
+
 [Install]
-WantedBy=multi-user.target
+WantedBy=default.target

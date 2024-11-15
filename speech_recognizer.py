@@ -110,16 +110,16 @@ def main() -> None:
         args.stop_threshold_eou
     )
 
-
+    print(args.input_device)
     send_transcript("/restart_conversation")  
-
+    
 
     with riva.client.audio_io.MicrophoneStream(
         args.sample_rate_hz,
         args.file_streaming_chunk,
         device=args.input_device,
     ) as audio_chunk_iterator:
-        
+
             responses=asr_service.streaming_response_generator(
                 audio_chunks=audio_chunk_iterator,
                 streaming_config=config,
@@ -136,10 +136,13 @@ def main() -> None:
                         for i, alternative in enumerate(result.alternatives):
                                 # send this automatically to rasa
                                 print(alternative.transcript)
-                                send_transcript(alternative.transcript, initial=False)
-                                
-      
-       
+                                try:
+                                    send_transcript(alternative.transcript, initial=False)
+                                except Exception as e :
+                                    print(e)
+                            
+    
+    
 
 
 if __name__ == '__main__':
