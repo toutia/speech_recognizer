@@ -6,7 +6,7 @@ from riva.client.argparse_utils import add_asr_config_argparse_parameters, add_c
 import riva.client.audio_io
 from config import chatbot_config, riva_config, asr_config, tts_config  
 import requests 
-
+import pyaudio
 
 
 
@@ -83,7 +83,25 @@ def main() -> None:
     args = parse_args()
     if args.list_devices:
         riva.client.audio_io.list_input_devices()
+      
         return
+    input_device= 0
+    p = pyaudio.PyAudio()
+    print("Input audio devices:")
+    for i in range(p.get_device_count()):
+        info = p.get_device_info_by_index(i)
+        if info['maxInputChannels'] < 1:
+            continue
+        print(info['index'], info['name'])
+        if 'webcam' in info['name'].lower():
+            input_device= info['index']
+            break
+        elif 'default' in info['name'].lower():
+            input_device= info['index']
+
+    
+            
+    p.terminate()
     auth = riva.client.Auth(args.ssl_cert, args.use_ssl,riva_config['RIVA_SPEECH_API_URL'], args.metadata)
     asr_service = riva.client.ASRService(auth)
     config = riva.client.StreamingRecognitionConfig(
@@ -109,15 +127,14 @@ def main() -> None:
         args.stop_threshold,                                                                                                                                                                                                                                                    
         args.stop_threshold_eou
     )
-
-    print(args.input_device)
+    print(input_device)
     send_transcript("/restart_conversation")  
     
 
     with riva.client.audio_io.MicrophoneStream(
         args.sample_rate_hz,
         args.file_streaming_chunk,
-        device=args.input_device,
+        device=input_device,
     ) as audio_chunk_iterator:
 
             responses=asr_service.streaming_response_generator(
