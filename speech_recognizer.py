@@ -1,24 +1,35 @@
 import argparse
 
 import riva.client
-from riva.client.argparse_utils import add_asr_config_argparse_parameters, add_connection_argparse_parameters
+from riva.client.argparse_utils import (
+    add_asr_config_argparse_parameters,
+    add_connection_argparse_parameters,
+)
 
 import riva.client.audio_io
-from config import chatbot_config, riva_config, asr_config, tts_config  
-import requests 
+from config import chatbot_config, riva_config, asr_config
+import requests
 import pyaudio
-
 
 
 def parse_args() -> argparse.Namespace:
     default_device_info = riva.client.audio_io.get_default_input_device_info()
-    default_device_index = None if default_device_info is None else default_device_info['index']
+    default_device_index = (
+        None if default_device_info is None else default_device_info["index"]
+    )
     parser = argparse.ArgumentParser(
         description="Streaming transcription from microphone via Riva AI Services",
         formatter_class=argparse.ArgumentDefaultsHelpFormatter,
     )
-    parser.add_argument("--input-device", type=int, default=default_device_index, help="An input audio device to use.")
-    parser.add_argument("--list-devices", action="store_true", help="List input audio device indices.")
+    parser.add_argument(
+        "--input-device",
+        type=int,
+        default=default_device_index,
+        help="An input audio device to use.",
+    )
+    parser.add_argument(
+        "--list-devices", action="store_true", help="List input audio device indices."
+    )
     parser = add_asr_config_argparse_parameters(parser, profanity_filter=True)
     parser = add_connection_argparse_parameters(parser)
     parser.add_argument(
@@ -40,34 +51,29 @@ def parse_args() -> argparse.Namespace:
 
 
 def send_transcript(text, initial=False):
-    responses=[]
+    responses = []
 
-    url = chatbot_config['URL']
+    url = chatbot_config["URL"]
     data = {
         "message": text,
         "sender": "user123",
     }
-    
+
     try:
         response = requests.post(url, json=data)
         response_data = response.json()
         print(response_data)
         for e_resp in response_data:
-            responses.append(e_resp.get('text'))
+            responses.append(e_resp.get("text"))
     except requests.exceptions.RequestException as e:
         print("Error during request:", e)
 
-
     print(responses)
-    # send to tts 
-    url = tts_config['TTS_API_URL']
-    
+    # send to tts
+    url = tts_config["TTS_API_URL"]
 
     for e_resp in responses:
-        payload = {
-            "voice":"English-US.Female-1",
-            "text": e_resp
-        }
+        payload = {"voice": "English-US.Female-1", "text": e_resp}
         try:
             response = requests.post(url, json=payload)
             response.raise_for_status()  # Raise an error for bad responses
@@ -75,34 +81,30 @@ def send_transcript(text, initial=False):
             print(f"Failed to send message to endpoint: {e}")
 
 
-
-
-
-
 def main() -> None:
     args = parse_args()
     if args.list_devices:
         riva.client.audio_io.list_input_devices()
-      
+
         return
-    input_device= 0
+    input_device = 0
     p = pyaudio.PyAudio()
     print("Input audio devices:")
     for i in range(p.get_device_count()):
         info = p.get_device_info_by_index(i)
-        if info['maxInputChannels'] < 1:
+        if info["maxInputChannels"] < 1:
             continue
-        print(info['index'], info['name'])
-        if 'webcam' in info['name'].lower():
-            input_device= info['index']
+        print(info["index"], info["name"])
+        if "webcam" in info["name"].lower():
+            input_device = info["index"]
             break
-        elif 'default' in info['name'].lower():
-            input_device= info['index']
+        elif "default" in info["name"].lower():
+            input_device = info["index"]
 
-    
-            
     p.terminate()
-    auth = riva.client.Auth(args.ssl_cert, args.use_ssl,riva_config['RIVA_SPEECH_API_URL'], args.metadata)
+    auth = riva.client.Auth(
+        args.ssl_cert, args.use_ssl, riva_config["RIVA_SPEECH_API_URL"], args.metadata
+    )
     asr_service = riva.client.ASRService(auth)
     config = riva.client.StreamingRecognitionConfig(
         config=riva.client.RecognitionConfig(
@@ -110,26 +112,27 @@ def main() -> None:
             language_code=args.language_code,
             max_alternatives=1,
             profanity_filter=args.profanity_filter,
-            enable_automatic_punctuation=asr_config['ENABLE_AUTOMATIC_PUNCTUATION'],
-            verbatim_transcripts=asr_config['VERBATIM_TRANSCRIPTS'],
+            enable_automatic_punctuation=asr_config["ENABLE_AUTOMATIC_PUNCTUATION"],
+            verbatim_transcripts=asr_config["VERBATIM_TRANSCRIPTS"],
             sample_rate_hertz=args.sample_rate_hz,
             audio_channel_count=1,
         ),
         interim_results=True,
     )
-    riva.client.add_word_boosting_to_config(config, args.boosted_lm_words, args.boosted_lm_score)
+    riva.client.add_word_boosting_to_config(
+        config, args.boosted_lm_words, args.boosted_lm_score
+    )
     riva.client.add_endpoint_parameters_to_config(
         config,
         args.start_history,
         args.start_threshold,
         args.stop_history,
         args.stop_history_eou,
-        args.stop_threshold,                                                                                                                                                                                                                                                    
-        args.stop_threshold_eou
+        args.stop_threshold,
+        args.stop_threshold_eou,
     )
     print(input_device)
-    send_transcript("/restart_conversation")  
-    
+    send_transcript("/restart_conversation")
 
     with riva.client.audio_io.MicrophoneStream(
         args.sample_rate_hz,
@@ -137,30 +140,27 @@ def main() -> None:
         device=input_device,
     ) as audio_chunk_iterator:
 
-            responses=asr_service.streaming_response_generator(
-                audio_chunks=audio_chunk_iterator,
-                streaming_config=config,
-            )
-            for response in responses:
-                if not response.results:
+        responses = asr_service.streaming_response_generator(
+            audio_chunks=audio_chunk_iterator,
+            streaming_config=config,
+        )
+        for response in responses:
+            if not response.results:
+                continue
+            for result in response.results:
+                if not result.alternatives:
                     continue
-                for result in response.results:
-                    if not result.alternatives:
-                        continue
-                    transcript = result.alternatives[0].transcript
-                    if result.is_final:
-                    
-                        for i, alternative in enumerate(result.alternatives):
-                                # send this automatically to rasa
-                                print(alternative.transcript)
-                                try:
-                                    send_transcript(alternative.transcript, initial=False)
-                                except Exception as e :
-                                    print(e)
-                            
-    
-    
+                transcript = result.alternatives[0].transcript
+                if result.is_final:
+
+                    for i, alternative in enumerate(result.alternatives):
+                        # send this automatically to rasa
+                        print(alternative.transcript)
+                        try:
+                            send_transcript(alternative.transcript, initial=False)
+                        except Exception as e:
+                            print(e)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()
