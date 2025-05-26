@@ -63,7 +63,7 @@ class RivaASRNode(Node):
         config = riva.client.StreamingRecognitionConfig(
             config=riva.client.RecognitionConfig(
                 encoding=riva.client.AudioEncoding.LINEAR_PCM,
-                language_code="fr-FR",
+                language_code=riva_config["LANGUAGE_CODE"],
                 max_alternatives=1,
                 profanity_filter=self.args.profanity_filter,
                 enable_automatic_punctuation=asr_config["ENABLE_AUTOMATIC_PUNCTUATION"],
@@ -104,6 +104,7 @@ class RivaASRNode(Node):
                         self.get_logger().info(f"Transcript: {transcript}")
                         msg = String()
                         msg.data = transcript
+                        msg.data = f"{riva_config["LANGUAGE_CODE"]}:{transcript}"
                         self.publisher_.publish(msg)
 
     def is_audio_playing(self):
