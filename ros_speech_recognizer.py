@@ -10,12 +10,15 @@ import pyaudio
 import rclpy
 from rclpy.node import Node
 from std_msgs.msg import String
+from std_srvs.srv import Trigger
 
 
 class RivaASRNode(Node):
     def __init__(self):
         super().__init__("riva_asr_node")
-        self.publisher_ = self.create_publisher(String, "asr_transcript", 10)
+        self.cli = self.create_client(Trigger, "get_audio_playback_status")
+
+        self.publisher_ = self.create_publisher(String, "transcripts", 10)
         self.get_logger().info("Riva ASR Node started")
         self.args = self.parse_args()
         self.auth = riva.client.Auth(
@@ -27,6 +30,7 @@ class RivaASRNode(Node):
         self.asr_service = riva.client.ASRService(self.auth)
         self.input_device = self.select_input_device()
         self.config = self.create_asr_config()
+        print(self.args)
         self.stream_and_publish()
 
     def parse_args(self):
@@ -59,7 +63,7 @@ class RivaASRNode(Node):
         config = riva.client.StreamingRecognitionConfig(
             config=riva.client.RecognitionConfig(
                 encoding=riva.client.AudioEncoding.LINEAR_PCM,
-                language_code=self.args.language_code,
+                language_code="fr-FR",
                 max_alternatives=1,
                 profanity_filter=self.args.profanity_filter,
                 enable_automatic_punctuation=asr_config["ENABLE_AUTOMATIC_PUNCTUATION"],
@@ -71,6 +75,11 @@ class RivaASRNode(Node):
         )
         return config
 
+    def filtered_audio_chunks(self, audio_chunk_iterator, check_playing_fn):
+        for chunk in audio_chunk_iterator:
+            if not check_playing_fn():  # Only yield if audio is not playing
+                yield chunk
+
     def stream_and_publish(self):
         with riva.client.audio_io.MicrophoneStream(
             self.args.sample_rate_hz,
@@ -79,7 +88,9 @@ class RivaASRNode(Node):
         ) as audio_chunk_iterator:
 
             responses = self.asr_service.streaming_response_generator(
-                audio_chunks=audio_chunk_iterator,
+                audio_chunks=self.filtered_audio_chunks(
+                    audio_chunk_iterator, self.is_audio_playing
+                ),
                 streaming_config=self.config,
             )
             for response in responses:
@@ -94,6 +105,20 @@ class RivaASRNode(Node):
                         msg = String()
                         msg.data = transcript
                         self.publisher_.publish(msg)
+
+    def is_audio_playing(self):
+
+        if not self.cli.wait_for_service(timeout_sec=1.0):
+            self.get_logger().warn("Playback status service unavailable.")
+            return False  # Fail safe: assume not playing
+
+        request = Trigger.Request()
+        future = self.cli.call_async(request)
+        rclpy.spin_until_future_complete(self, future, timeout_sec=1.0)
+
+        if future.done():
+            return future.result().success
+        return False
 
 
 def main(args=None):
